@@ -6,56 +6,67 @@
 <title>SEOplant Dashboard</title>
 <style>
   :root {
-    --bg: #ffffff; --surface: #f8fafc; --text: #1e293b;
-    --text-muted: #64748b; --border: #e2e8f0;
-    --primary: #3B82F6; --primary-light: #dbeafe;
-    --green: #10B981; --green-bg: #dcfce7;
-    --red: #EF4444; --red-bg: #fee2e2;
-    --amber: #F59E0B; --amber-bg: #fef3c7;
-    --radius: 10px; --sidebar-w: 220px;
+    --bg: #ffffff; --surface: #f8fafc; --text: #0F172A;
+    --text-secondary: #475569; --text-muted: #94A3B8; --border: #E2E8F0;
+    --primary: #3B82F6; --primary-hover: #2563EB; --primary-light: #EFF6FF;
+    --gradient: linear-gradient(135deg, #3B82F6, #6366F1);
+    --green: #10B981; --green-bg: #ECFDF5; --green-text: #065F46;
+    --red: #EF4444; --red-bg: #FEF2F2; --red-text: #991B1B;
+    --amber: #F59E0B; --amber-bg: #FFFBEB; --amber-text: #92400E;
+    --purple: #8B5CF6; --purple-bg: #F5F3FF;
+    --radius: 10px; --radius-lg: 14px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+    --shadow: 0 1px 3px rgba(0,0,0,0.1);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+    --transition: 150ms cubic-bezier(0.4,0,0.2,1);
+    --sidebar-w: 240px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #0f172a; --surface: #1e293b; --text: #f1f5f9;
-            --text-muted: #94a3b8; --border: #334155;
-            --primary-light: #1e3a5f; --green-bg: #14532d;
-            --red-bg: #450a0a; --amber-bg: #451a03; }
+    :root { --bg: #0B1121; --surface: #131B2F; --text: #F1F5F9;
+            --text-secondary: #94A3B8; --text-muted: #64748B; --border: #1E293B;
+            --primary-light: #1E3A5F; --green-bg: #022C22; --red-bg: #450A0A;
+            --amber-bg: #451A03; --purple-bg: #1E1B4B; }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: Inter, system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+  body { font-family: Inter, system-ui, -apple-system, sans-serif; background: var(--surface); color: var(--text); display: flex; min-height: 100vh; -webkit-font-smoothing: antialiased; }
   a { color: var(--primary); text-decoration: none; }
-  a:hover { text-decoration: underline; }
+  a:hover { text-decoration: none; }
 
-  /* Sidebar */
-  .sidebar { width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); padding: 24px 0; position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100; }
-  .sidebar-logo { padding: 0 20px 24px; font-size: 1.3rem; font-weight: 700; border-bottom: 1px solid var(--border); margin-bottom: 16px; display: block; color: var(--text); }
-  .sidebar-logo:hover { text-decoration: none; }
-  .sidebar-nav { padding: 0 12px; }
-  .sidebar-nav a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--text-muted); font-size: 14px; font-weight: 500; margin-bottom: 2px; transition: all .15s; }
-  .sidebar-nav a:hover, .sidebar-nav a.active { background: var(--primary-light); color: var(--primary); text-decoration: none; }
-  .sidebar-user { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; border-top: 1px solid var(--border); font-size: 13px; }
-  .sidebar-user .plan-badge { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; margin-top: 4px; }
+  /* Sidebar — dark */
+  .sidebar { width: var(--sidebar-w); background: #0B1121; padding: 28px 0; position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 100; display: flex; flex-direction: column; }
+  .sidebar-logo { padding: 0 24px 24px; font-size: 1.3rem; font-weight: 700; color: #F1F5F9; display: block; border-bottom: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px; }
+  .sidebar-logo:hover { text-decoration: none; color: #fff; }
+  .sidebar-logo span { background: var(--gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .sidebar-nav { padding: 0 12px; flex: 1; }
+  .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 8px; color: #94A3B8; font-size: 14px; font-weight: 500; margin-bottom: 2px; transition: all var(--transition); }
+  .sidebar-nav a:hover, .sidebar-nav a.active { background: rgba(255,255,255,0.06); color: #F1F5F9; }
+  .sidebar-nav a.active { background: rgba(59,130,246,0.12); color: #60A5FA; }
+  .sidebar-nav a .icon { font-size: 1.1rem; width: 22px; text-align: center; opacity: 0.7; }
+  .sidebar-user { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 13px; color: #94A3B8; margin-top: auto; }
+  .sidebar-user strong { color: #F1F5F9; display: block; }
 
   /* Main */
-  .main { margin-left: var(--sidebar-w); flex: 1; padding: 40px; max-width: calc(100vw - var(--sidebar-w)); }
-  .page-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 8px; }
-  .page-sub { color: var(--text-muted); margin-bottom: 32px; }
+  .main { margin-left: var(--sidebar-w); flex: 1; padding: 48px; max-width: calc(100vw - var(--sidebar-w)); }
+  .page-title { font-size: 1.75rem; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.02em; }
+  .page-sub { color: var(--text-muted); margin-bottom: 36px; font-size: 0.95rem; }
 
-  /* Cards */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
-  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-  .stat-value { font-size: 1.8rem; font-weight: 800; }
-  .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; }
-  .stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 6px; }
+  /* Stats */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .stat-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 24px; transition: all var(--transition); }
+  .stat-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+  .stat-value { font-size: 2rem; font-weight: 800; letter-spacing: -0.02em; }
+  .stat-label { font-size: 0.8rem; color: var(--text-muted); margin-top: 2px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.03em; }
+  .stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 8px; }
 
   /* Buttons */
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; text-decoration: none; transition: all .15s; }
-  .btn-primary { background: var(--primary); color: #fff; }
-  .btn-primary:hover { opacity: .9; }
-  .btn-secondary { background: transparent; color: var(--primary); border: 1.5px solid var(--primary); }
-  .btn-secondary:hover { background: var(--primary-light); }
-  .btn-sm { padding: 4px 12px; font-size: 12px; }
-  .btn-danger { color: var(--red); border: 1px solid var(--red); background: transparent; font-size: 12px; padding: 4px 12px; }
-  .btn-danger:hover { background: var(--red-bg); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: none; text-decoration: none; transition: all var(--transition); font-family: inherit; letter-spacing: -0.01em; }
+  .btn-primary { background: var(--gradient); color: #fff; box-shadow: var(--shadow-sm); }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); opacity: 0.95; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+  .btn-sm { padding: 5px 14px; font-size: 12px; }
+  .btn-danger { color: var(--red); border: 1px solid var(--red); background: transparent; font-size: 12px; padding: 5px 14px; }
+  .btn-danger:hover { background: var(--red-bg); color: var(--red-text); }
 
   /* Badges */
   .badge { display: inline-block; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
@@ -111,19 +122,19 @@
 
 <!-- Sidebar -->
 <aside class="sidebar">
-  <a href="#" class="sidebar-logo" onclick="navigate('projects')">SEOplant</a>
+  <a href="#" class="sidebar-logo" onclick="navigate('projects')"><span>SEOplant</span></a>
   <nav class="sidebar-nav">
     <a href="#" data-page="projects" class="active" onclick="navigate('projects')">
-      <span style="font-size:1.1rem;">&boxh;</span> <span>Projects</span>
+      <span class="icon">&#9632;</span> Projects
     </a>
     <a href="#" data-page="credits" onclick="navigate('credits')">
-      <span style="font-size:1.1rem;">&diams;</span> <span>Credits</span>
+      <span class="icon">&#9670;</span> Credits
     </a>
     <a href="#" data-page="billing" onclick="navigate('billing')">
-      <span style="font-size:1.1rem;">&uarr;</span> <span>Billing</span>
+      <span class="icon">&#8593;</span> Billing
     </a>
     <a href="#" onclick="doLogout()">
-      <span style="font-size:1.1rem;">&larr;</span> <span>Logout</span>
+      <span class="icon">&#8592;</span> Logout
     </a>
   </nav>
   <div class="sidebar-user" id="sidebar-user"></div>
