@@ -1,12 +1,3 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-
-# Test artifacts
-test_run/
-
 # OS
 .DS_Store
 Thumbs.db
@@ -14,22 +5,3 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
-
-# Build output
-dist/
-node_modules/
-
-# Env
-.env
-.env.local
-*.db
-
-# Internal docs — do NOT commit
-*项目转型报告*
-*DEPLOY-TO-HERMES*
-*SKILL.md
-*LAUNCH-POSTS*
-scripts/fix_*
-scripts/setup_*
-scripts/test_*
-*- 副本/

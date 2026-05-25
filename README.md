@@ -1,157 +1,105 @@
-# SEOplant
+# SEOplant — AI SEO Website Factory
 
-> **输入一个关键词，AI 自动完成竞品分析 → SEO 战略 → 网站生成 → 部署上线。**
+> **From keyword to ranking website. A proven 5-phase pipeline.**
 >
-> From keyword to ranking website. Automatically.
->
-> **[seoplant.io](https://seoplant.io)** — AI Programmatic SEO Platform
-
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
+> This repository documents the methodology. The production platform is at [seoplant.io](https://seoplant.io).
 
 ---
 
-## What is SEOplant?
+## What Is This?
 
-SEOplant is an **open-source AI Programmatic SEO Platform** — not just another AI website builder.
+SEOplant is a battle-tested workflow for building SEO-optimized websites programmatically. It covers competitive research, SEO strategy, design intelligence, site generation, and deployment — in one automated pipeline.
 
-Existing tools either:
-- **Analyze SEO** but can't build sites (Surfer, Frase, Byword)
-- **Build sites** but don't understand SEO (10Web, Durable, Wix AI)
-
-SEOplant does both. Give it a keyword or niche:
-
-| Step | What Happens | Module |
-|------|-------------|--------|
-| 1. **Market Intel** | Scans competitors, analyzes SERP landscape, estimates traffic potential | `competitor_intel.py` |
-| 2. **SEO Strategy** | Generates topic clusters, content calendar, keyword difficulty matrix | `seo_engine.py` |
-| 3. **Design System** | Extracts design tokens from winning sites, fuses into DESIGN.md | `design_intel.py` |
-| 4. **Site Factory** | Scaffolds Astro static site with Schema, llms.txt, i18n routing | `site_builder.py` |
-| 5. **Deploy** | One-click push to your own VPS (SSH) or Vercel/Cloudflare | `deployer.py` |
+This repo provides the **blueprint**. You can use it to build your own implementation, or skip the work and use our hosted platform.
 
 ---
 
-## Quick Start
+## The 5-Phase Pipeline
 
-```bash
-git clone https://github.com/RichardDu1/seoplant.git
-cd seoplant
-pip install requests beautifulsoup4
+### Phase 1: Competitor Intelligence
+Analyze the top competitors in any niche. Crawl their websites, extract SEO signals, and identify gaps you can exploit.
 
-# Analyze competitors
-python scripts/competitor_intel.py report "best hiking boots"
+**What to build:**
+- Competitor discovery via search APIs
+- Website crawler with content extraction
+- SEO signal analyzer (titles, meta, schema, headings, word count)
+- SWOT report generator
 
-# Generate SEO plan
-python scripts/seo_engine.py plan "scottish highlands travel" --type travel
+**Key insight:** Don't just find who ranks — analyze *why*. URL structure, content depth, schema markup, and internal linking patterns.
 
-# Scaffold Astro site
-python scripts/site_builder.py scaffold ./my-site --name "My Site" --keyword "scottish highlands travel"
+### Phase 2: SEO/GEO Strategy
+Turn keyword research into an actionable content plan with topic clusters, content calendars, and AI search optimization.
 
-# Deploy to your VPS
-python scripts/deployer.py deploy ./my-site mysite.com --host 12.34.56.78 --caddy
-```
+**What to build:**
+- Keyword expansion engine (modifier templates + search volume data)
+- Topic clustering by search intent
+- Content calendar generator (phased publishing plan)
+- AI search optimization config (structured data, crawler hints)
 
----
+**Key insight:** Modern SEO is about topical authority. Build pillar pages and cluster content around them.
 
-## Architecture
+### Phase 3: Design Intelligence
+Extract design tokens from real websites already winning in your niche, then fuse them into an original design system.
 
-```
-Keyword / Niche
-      │
-      ▼
-┌──────────────────┐
-│ competitor_intel │  ← Jina Search + SERP analysis
-│ Phase 1          │
-└────────┬─────────┘
-         │ competitor report
-         ▼
-┌──────────────────┐
-│ seo_engine       │  ← Keyword expansion, clustering, content calendar
-│ Phase 2          │
-└────────┬─────────┘
-         │ SEO blueprint
-         ▼
-┌──────────────────┐
-│ design_intel     │  ← Design token extraction, DESIGN.md generation
-│ Phase 3          │
-└────────┬─────────┘
-         │ design system
-         ▼
-┌──────────────────┐
-│ site_builder     │  ← Astro scaffolding, Schema markup, i18n routing
-│ Phase 4          │
-└────────┬─────────┘
-         │ complete Astro project
-         ▼
-┌──────────────────┐
-│ deployer         │  ← VPS SSH push / Vercel / Cloudflare
-│ Phase 5          │
-└────────┬─────────┘
-         │
-         ▼
-   🚀 Live Site
-```
+**What to build:**
+- Design inspiration search across design galleries
+- CSS/design token extractor (colors, fonts, spacing, layout)
+- Design system generator
+- Multi-design fusion engine
+
+**Key insight:** Every niche has visual conventions. Extract from the top competitors, fuse, and differentiate.
+
+### Phase 4: Site Generation
+Scaffold an SEO-optimized static website where every page is built for ranking.
+
+**What to build:**
+- Static site project scaffolder
+- SEO head component (meta, OG, Twitter cards)
+- Schema markup component (JSON-LD)
+- i18n routing with per-language keyword research
+- Global CSS from design tokens
+
+**Key insight:** Architecture decisions flow from the SEO plan, not visual design. URL structure and internal linking are decided in Phase 2.
+
+### Phase 5: Deployment
+One-click deploy with no vendor lock-in. The generated site is standard code — users own it and can deploy anywhere.
+
+**What to build:**
+- Web server config generator with auto-SSL
+- SSH-based deployment agent
+- Container orchestration for optional services
+- Cloud platform CLI integration
+
+**Key insight:** Generated sites are standard static projects. No proprietary format. No lock-in.
 
 ---
 
-## Why Open Source?
+## The Production Platform
 
-- **No vendor lock-in** — code is yours, site is yours, server is yours
-- **Auditable** — see what the deploy agent does before installing it on your server
-- **BYOV (Bring Your Own VPS)** — use your $5/month VPS, not overpriced hosting
-- **Extensible** — fork, modify, integrate into your agency workflow
+The hosted platform at [seoplant.io](https://seoplant.io) adds the layers that turn the blueprint into a product:
 
-The cloud platform at **[seoplant.io](https://seoplant.io)** adds: real SEO data (DataForSEO), AI agent orchestration, programmatic SEO at scale (5000+ pages), autonomous rank monitoring.
-
----
-
-## Requirements
-
-- Python 3.10+
-- `pip install requests beautifulsoup4`
-- Astro (for site generation): `npm create astro@latest`
-- SSH access (for VPS deployment)
-- Optional: `pip install paramiko` (richer SSH error handling)
+| Layer | What It Does |
+|-------|-------------|
+| **Real-time data** | Search volume, keyword difficulty, CPC, competition data |
+| **AI content** | Article generation with humanization, SEO-optimized structure |
+| **Programmatic SEO** | Template + dataset → thousands of pages at scale |
+| **Rank monitoring** | Position tracking with content decay detection |
+| **Autonomous agent** | Continuous optimization — not just one-shot generation |
+| **Managed dashboard** | Multi-project management, credits, team accounts |
 
 ---
 
-## File Structure
+## Getting Started
 
-```
-seoplant/
-├── README.md
-├── LICENSE (MIT)
-├── scripts/
-│   ├── competitor_intel.py     # Phase 1: competitor research + SEO analysis
-│   ├── seo_engine.py           # Phase 2: keyword planning + GEO config
-│   ├── design_intel.py         # Phase 3: design token extraction
-│   ├── site_builder.py         # Phase 4: Astro project scaffolding
-│   └── deployer.py             # Phase 5: VPS/Vercel/Cloudflare deployment
-├── references/
-│   └── tool-registry.md        # Tool capability registry
-└── design-library/
-    └── index.json              # Design reference library
-```
-
----
-
-## Roadmap
-
-| Phase | Status | What |
-|-------|--------|------|
-| **1. CLI Tools** | Done | All 5 modules work standalone |
-| **2. DataForSEO Integration** | In Progress | Real search volume, KD, CPC data |
-| **3. SaaS Dashboard** | Planned | Multi-site management, credits, API |
-| **4. Programmatic SEO Engine** | Planned | Template + dataset → 5000+ pages |
-| **5. Autonomous Agent** | Planned | Rank monitoring → content refresh → auto-expand |
+1. Read [SKILL.md](SKILL.md) — the complete step-by-step workflow
+2. Build your own implementation following the 5-phase blueprint
+3. Or visit [seoplant.io](https://seoplant.io) and enter a keyword
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE)
-
-The deploy agent is also MIT (auditable by design — you should know what runs on your server).
+MIT — the methodology is free to use. The production platform code is proprietary.
 
 ---
 
