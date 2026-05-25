@@ -26,14 +26,15 @@ except ImportError:
 JINA_READER = "https://r.jina.ai/"
 JINA_SEARCH = "https://s.jina.ai/"
 BRAVE_SEARCH = "https://api.search.brave.com/res/v1/web/search"
+SEARXNG_URL = "http://127.0.0.1:8080"  # Self-hosted, no rate limits
 REQUEST_TIMEOUT = 30
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; CompetitorIntel/1.0)",
     "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
 }
 
-# Search engine priority: Jina (free, fast) → Brave (free tier) → DataForSEO SERP (paid)
-SEARCH_ENGINES = ["jina", "brave", "dataforseo"]
+# Search engine priority: Jina (free, fast) → SearXNG (self-hosted, unlimited) → DataForSEO SERP (paid)
+SEARCH_ENGINES = ["jina", "searxng", "dataforseo"]
 
 # ---------------------------------------------------------------------------
 # 1. Search Competitors
@@ -83,14 +84,14 @@ def search_competitors(
         except Exception as e:
             print(f"  [WARN] Jina Search failed for '{query[:40]}': {e}")
 
-        # --- Engine 2: Brave Search (fallback) ---
-        if not results and brave_key:
+        # --- Engine 2: SearXNG (self-hosted fallback, free) ---
+        if not results:
             try:
-                results = _search_brave(query, seen_domains, brave_key)
+                results = _search_searxng(query, seen_domains)
             except Exception as e:
-                print(f"  [WARN] Brave Search failed for '{query[:40]}': {e}")
+                print(f"  [WARN] SearXNG failed for '{query[:40]}': {e}")
 
-        # --- Engine 3: DataForSEO SERP (fallback) ---
+        # --- Engine 3: DataForSEO SERP (paid fallback) ---
         if not results:
             try:
                 results = _search_dataforseo(query, seen_domains)
@@ -168,6 +169,35 @@ def _search_brave(query: str, seen_domains: set, api_key: str) -> list[dict]:
             "source": query[:50],
             "domain": domain,
             "engine": "brave",
+        })
+    return results
+
+
+def _search_searxng(query: str, seen_domains: set, base_url: str = None) -> list[dict]:
+    """Search using self-hosted SearXNG (free, no rate limits, 80+ engines)."""
+    url = (base_url or SEARXNG_URL) + "/search"
+    resp = requests.get(
+        url,
+        params={"q": query, "format": "json", "categories": "general"},
+        timeout=REQUEST_TIMEOUT,
+    )
+    if resp.status_code != 200:
+        raise Exception(f"SearXNG returned HTTP {resp.status_code}")
+
+    data = resp.json()
+    results = []
+    for item in data.get("results", []):
+        domain = urlparse(item.get("url", "")).netloc
+        if _is_skip_domain(domain) or domain in seen_domains:
+            continue
+        seen_domains.add(domain)
+        results.append({
+            "url": item.get("url", ""),
+            "title": item.get("title", "").strip(),
+            "snippet": item.get("content", ""),
+            "source": query[:50],
+            "domain": domain,
+            "engine": "searxng",
         })
     return results
 
