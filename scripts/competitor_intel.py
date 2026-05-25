@@ -25,11 +25,15 @@ except ImportError:
 # ---------------------------------------------------------------------------
 JINA_READER = "https://r.jina.ai/"
 JINA_SEARCH = "https://s.jina.ai/"
+BRAVE_SEARCH = "https://api.search.brave.com/res/v1/web/search"
 REQUEST_TIMEOUT = 30
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (compatible; CompetitorIntel/1.0)",
     "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
 }
+
+# Search engine priority: Jina (free, fast) → Brave (free tier) → DataForSEO SERP (paid)
+SEARCH_ENGINES = ["jina", "brave", "dataforseo"]
 
 # ---------------------------------------------------------------------------
 # 1. Search Competitors
@@ -39,16 +43,28 @@ def search_competitors(
     keyword: str,
     site_type: str = "website",
     num_results: int = 15,
+    brave_api_key: str = None,
 ) -> list[dict]:
-    """Search for competitor websites in the same niche.
+    """Search for competitor websites with automatic engine fallback.
 
-    Uses Jina Search with multiple query patterns.
+    Priority: Jina Search → Brave Search → DataForSEO SERP
+
+    Each engine is tried in order. If one fails or is rate-limited,
+    the next takes over automatically.
+
+    Args:
+        keyword: Primary keyword/niche
+        site_type: 'website', 'ecommerce', 'travel', 'saas', etc.
+        num_results: Max results to return
+        brave_api_key: Brave Search API key (optional, from env BRAVE_API_KEY)
 
     Returns:
-        List of {url, title, snippet, source}
+        List of {url, title, snippet, source, domain, engine}
     """
+    import os
+
     queries = [
-        f"best {keyword} {site_type} 2025",
+        f"best {keyword} {site_type} 2026",
         f"top {keyword} websites",
         f"{keyword} {site_type} examples",
         f"{keyword} competitors comparison",
@@ -56,38 +72,142 @@ def search_competitors(
 
     all_results = []
     seen_domains = set()
+    brave_key = brave_api_key or os.environ.get("BRAVE_API_KEY", "")
 
     for query in queries:
+        results = None
+
+        # --- Engine 1: Jina Search ---
         try:
-            resp = requests.get(
-                JINA_SEARCH + quote_plus(query),
-                headers={**HEADERS, "Accept": "application/json"},
-                timeout=REQUEST_TIMEOUT,
-            )
-            if resp.status_code == 200:
-                text = resp.text
-                links = re.findall(r'\[([^\]]+)\]\((https?://[^\)]+)\)', text)
-                for title, url in links:
-                    domain = urlparse(url).netloc
-                    skip = ['google.', 'youtube.', 'facebook.', 'twitter.',
-                            'reddit.', 'wikipedia.', 'jina.ai', 'bing.',
-                            'amazon.', 'pinterest.']
-                    if any(s in domain for s in skip):
-                        continue
-                    if domain not in seen_domains:
-                        seen_domains.add(domain)
-                        all_results.append({
-                            "url": url,
-                            "title": title.strip(),
-                            "snippet": "",
-                            "source": query[:50],
-                            "domain": domain,
-                        })
+            results = _search_jina(query, seen_domains)
         except Exception as e:
-            print(f"  [WARN] Search failed for '{query[:40]}': {e}")
-            continue
+            print(f"  [WARN] Jina Search failed for '{query[:40]}': {e}")
+
+        # --- Engine 2: Brave Search (fallback) ---
+        if not results and brave_key:
+            try:
+                results = _search_brave(query, seen_domains, brave_key)
+            except Exception as e:
+                print(f"  [WARN] Brave Search failed for '{query[:40]}': {e}")
+
+        # --- Engine 3: DataForSEO SERP (fallback) ---
+        if not results:
+            try:
+                results = _search_dataforseo(query, seen_domains)
+            except Exception as e:
+                print(f"  [WARN] DataForSEO SERP failed for '{query[:40]}': {e}")
+
+        if results:
+            all_results.extend(results)
 
     return all_results[:num_results]
+
+
+def _search_jina(query: str, seen_domains: set) -> list[dict]:
+    """Search using Jina AI (requires free API key as of 2026)."""
+    import os
+    jina_key = os.environ.get("JINA_API_KEY", "")
+    headers = {**HEADERS, "Accept": "application/json"}
+    if jina_key:
+        headers["Authorization"] = f"Bearer {jina_key}"
+
+    resp = requests.get(
+        JINA_SEARCH + quote_plus(query),
+        headers=headers,
+        timeout=REQUEST_TIMEOUT,
+    )
+    if resp.status_code == 429:
+        raise Exception("Jina rate limited (429)")
+    if resp.status_code == 401:
+        raise Exception("Jina requires API key — set JINA_API_KEY env var or get a free key at https://jina.ai")
+    if resp.status_code != 200:
+        raise Exception(f"Jina returned HTTP {resp.status_code}")
+
+    results = []
+    links = re.findall(r'\[([^\]]+)\]\((https?://[^\)]+)\)', resp.text)
+    for title, url in links:
+        domain = urlparse(url).netloc
+        if _is_skip_domain(domain) or domain in seen_domains:
+            continue
+        seen_domains.add(domain)
+        results.append({
+            "url": url, "title": title.strip(), "snippet": "",
+            "source": query[:50], "domain": domain, "engine": "jina",
+        })
+    return results
+
+
+def _search_brave(query: str, seen_domains: set, api_key: str) -> list[dict]:
+    """Search using Brave Search API (free 2000/mo, then $5/1000)."""
+    resp = requests.get(
+        BRAVE_SEARCH,
+        params={"q": query, "count": 10},
+        headers={
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip",
+            "X-Subscription-Token": api_key,
+        },
+        timeout=REQUEST_TIMEOUT,
+    )
+    if resp.status_code == 429:
+        raise Exception("Brave rate limited (429)")
+    if resp.status_code != 200:
+        raise Exception(f"Brave returned HTTP {resp.status_code}")
+
+    data = resp.json()
+    results = []
+    for item in data.get("web", {}).get("results", []):
+        domain = urlparse(item.get("url", "")).netloc
+        if _is_skip_domain(domain) or domain in seen_domains:
+            continue
+        seen_domains.add(domain)
+        results.append({
+            "url": item.get("url", ""),
+            "title": item.get("title", "").strip(),
+            "snippet": item.get("description", ""),
+            "source": query[:50],
+            "domain": domain,
+            "engine": "brave",
+        })
+    return results
+
+
+def _search_dataforseo(query: str, seen_domains: set) -> list[dict]:
+    """Search using DataForSEO SERP API (paid, most comprehensive)."""
+    try:
+        from dataforseo_client import DataForSEOClient
+        client = DataForSEOClient()
+        if not client.is_configured:
+            raise Exception("DataForSEO not configured")
+
+        serp = client.serp_organic(query, depth=10)
+        results = []
+        for items in serp.values():
+            for item in items.get("items", []):
+                domain = item.get("domain", "")
+                if _is_skip_domain(domain) or domain in seen_domains:
+                    continue
+                seen_domains.add(domain)
+                results.append({
+                    "url": item.get("url", ""),
+                    "title": item.get("title", "").strip(),
+                    "snippet": item.get("description", ""),
+                    "source": query[:50],
+                    "domain": domain,
+                    "engine": "dataforseo",
+                })
+        return results
+    except ImportError:
+        raise Exception("DataForSEO client not available")
+
+
+def _is_skip_domain(domain: str) -> bool:
+    """Check if a domain should be excluded from results."""
+    skip = ['google.', 'youtube.', 'facebook.', 'twitter.',
+            'reddit.', 'wikipedia.', 'jina.ai', 'bing.',
+            'amazon.', 'pinterest.', 'instagram.', 'tiktok.',
+            'linkedin.', 'quora.', 'medium.com']
+    return any(s in domain.lower() for s in skip)
 
 
 # ---------------------------------------------------------------------------
@@ -471,16 +591,17 @@ def generate_competitor_report(
 """
 
     # Build summary table
-    report += "| # | Competitor | SEO Score | Tech Stack | Content (words) |\n"
-    report += "|---|-----------|-----------|------------|----------------|\n"
+    report += "| # | Competitor | SEO Score | Engine | Content (words) |\n"
+    report += "|---|-----------|-----------|--------|----------------|\n"
 
     for i, comp in enumerate(competitors):
         seo = seo_analyses[i] if i < len(seo_analyses) else {}
         score = seo.get("overall_score", "N/A")
-        tech = ", ".join(comp.get("tech_hints", [])[:3]) or "Unknown"
+        tech = ", ".join(comp.get("tech_hints", [])[:2]) or "Unknown"
         wc = comp.get("word_count", 0)
         domain = comp.get("domain", comp.get("url", "N/A"))
-        report += f"| {i+1} | {domain} | {score}/10 | {tech} | {wc:,} |\n"
+        engine = comp.get("engine", "?")
+        report += f"| {i+1} | {domain} | {score}/10 | {engine} | {wc:,} |\n"
 
     # SWOT for each competitor
     report += "\n---\n\n## Detailed Analysis\n\n"
@@ -617,11 +738,12 @@ def main():
 
     if command == "search":
         keyword = keyword or (sys.argv[2] if len(sys.argv) > 2 else "travel")
-        print(f"🔍 Searching competitors for '{keyword}'...")
+        print(f"Searching competitors for '{keyword}'...")
         results = search_competitors(keyword)
         print(f"\nFound {len(results)} competitors:\n")
         for i, r in enumerate(results, 1):
-            print(f"  {i}. [{r['domain']}] {r['title'][:60]}")
+            engine_tag = f"[{r.get('engine', '?')}]"
+            print(f"  {i}. {engine_tag} [{r['domain']}] {r['title'][:60]}")
             print(f"     {r['url']}")
 
     elif command == "crawl":
@@ -654,10 +776,11 @@ def main():
 
     elif command == "report":
         keyword = keyword or (sys.argv[2] if len(sys.argv) > 2 else "travel")
-        print(f"📄 Generating full report for '{keyword}'...")
+        print(f"Generating full report for '{keyword}'...")
         print("  Step 1: Searching competitors...")
         results = search_competitors(keyword, num_results=5)
-        print(f"  Found {len(results)} competitors")
+        engines_used = set(r.get("engine", "?") for r in results)
+        print(f"  Found {len(results)} competitors (engines: {', '.join(engines_used)})")
 
         print("  Step 2: Crawling websites...")
         crawled = []
