@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import User, Project
-from ..config import CREDIT_COSTS
+from ..config import CREDIT_COSTS, can_use_feature
 from ..schemas import SEOAnalyzeRequest, SEOGenerateRequest, DeployRequest, DeployResponse
 from .projects import _get_owned_project, _deduct_credits
 
@@ -118,6 +118,121 @@ def generate_site(
         "files_created": result.get("created_files", []),
         "credits_spent": cost,
         "credits_remaining": user.credits_remaining,
+    }
+
+
+@router.post("/generate-content")
+def generate_content(
+    request: dict,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Generate AI-powered SEO content. Starter+ only."""
+    if not can_use_feature(user, "ai_content"):
+        raise HTTPException(402, "AI content generation requires Starter plan or higher. Upgrade to unlock.")
+
+    keyword = request.get("keyword", "")
+    content_type = request.get("content_type", "blog_post")
+    word_count = request.get("word_count", 1500)
+
+    cost = CREDIT_COSTS.get("ai_content_article", 3)
+    if content_type == "pillar_page":
+        cost = CREDIT_COSTS.get("ai_content_pillar", 10)
+
+    if not _deduct_credits(user, cost, f"ai_content_{content_type}", "", db):
+        raise HTTPException(402, f"Not enough credits. Need {cost}, have {user.credits_remaining}")
+
+    db.refresh(user)
+
+    from ai_content import AIContentGenerator
+    gen = AIContentGenerator()
+    result = gen.generate_article(keyword, content_type, word_count)
+
+    return {
+        **result,
+        "credits_spent": cost,
+        "credits_remaining": user.credits_remaining,
+    }
+
+
+@router.post("/check-rankings")
+def check_rankings(
+    request: dict,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Check rankings for tracked keywords. Pro+ only."""
+    if not can_use_feature(user, "rank_monitoring"):
+        raise HTTPException(402, "Rank monitoring requires Pro plan or higher. Upgrade to unlock.")
+
+    keywords = request.get("keywords", [])
+    cost = CREDIT_COSTS.get("rank_check", 1) * max(len(keywords), 1)
+
+    if not _deduct_credits(user, cost, "rank_check", "", db):
+        raise HTTPException(402, f"Not enough credits. Need {cost}, have {user.credits_remaining}")
+
+    db.refresh(user)
+
+    from rank_monitor import RankMonitor
+    monitor = RankMonitor()
+    for kw in keywords:
+        monitor.add_keyword(
+            kw.get("keyword", ""),
+            kw.get("url", ""),
+            kw.get("project_id", ""),
+        )
+
+    results = monitor.check_rankings()
+
+    return {
+        **results,
+        "credits_spent": cost,
+        "credits_remaining": user.credits_remaining,
+    }
+
+
+@router.post("/detect-decay")
+def detect_decay(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Detect content decay (ranking drops). Pro+ only."""
+    if not can_use_feature(user, "rank_monitoring"):
+        raise HTTPException(402, "Rank monitoring requires Pro plan or higher.")
+
+    from rank_monitor import RankMonitor
+    monitor = RankMonitor()
+    decaying = monitor.detect_decay()
+
+    return {
+        "decaying_keywords": len(decaying),
+        "keywords": decaying,
+        "recommendation": "Regenerate content for these pages to recover rankings." if decaying else "All rankings stable.",
+    }
+
+
+@router.get("/tier-status")
+def tier_status(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get the current user's tier limits and usage."""
+    from ..config import get_tier
+
+    tier = get_tier(user.plan)
+    return {
+        "plan": user.plan,
+        "tier": tier,
+        "credits_remaining": user.credits_remaining,
+        "credits_used": user.credits_used_total or 0,
+        "projects_used": len(user.projects),
+        "projects_max": tier["max_projects"],
+        "features_enabled": {
+            "ai_content": tier["ai_content"],
+            "rank_monitoring": tier["rank_monitoring"],
+            "real_data": tier["real_data"],
+            "pseo_pages_max": tier["max_pseo_pages"],
+        },
     }
 
 

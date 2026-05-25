@@ -1,5 +1,5 @@
 """
-SEOplant Backend — Project CRUD routes.
+SEOplant Backend — Project CRUD routes with tier enforcement.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import User, Project, CreditTransaction
-from ..config import CREDIT_COSTS
+from ..config import CREDIT_COSTS, can_create_project, get_tier
 from ..schemas import ProjectCreate, ProjectUpdate, ProjectResponse
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
@@ -24,7 +24,15 @@ def list_projects(user: User = Depends(get_current_user), db: Session = Depends(
 
 @router.post("/", response_model=ProjectResponse, status_code=201)
 def create_project(body: ProjectCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    """Create a new SEO project."""
+    """Create a new SEO project. Enforces tier project limits."""
+    if not can_create_project(user):
+        tier = get_tier(user.plan)
+        raise HTTPException(
+            402,
+            f"Project limit reached. Your {tier['name']} plan allows {tier['max_projects']} project(s). "
+            f"Upgrade to create more."
+        )
+
     name = body.name or f"{body.keyword.title()} — {body.site_type.title()} Site"
     project = Project(
         owner_id=user.id,
