@@ -63,6 +63,7 @@ class AIContentGenerator:
         word_count: int = 1500,
         context: dict = None,
         tone: str = "expert",
+        humanize: bool = True,
     ) -> dict:
         """Generate a complete, publish-ready SEO article.
 
@@ -110,7 +111,22 @@ class AIContentGenerator:
                 raw = resp.choices[0].message.content
                 tokens = resp.usage.total_tokens
 
-            return self._parse_llm_output(raw, tokens)
+            result = self._parse_llm_output(raw, tokens)
+
+            if humanize:
+                try:
+                    from ai_humanizer import AIHumanizer
+                    h = AIHumanizer()
+                    result["content_markdown"] = h.humanize(
+                        result["content_markdown"],
+                        keywords=[keyword.split(" in ")[0], keyword],
+                        intensity="medium",
+                    )
+                    result["humanized"] = True
+                except ImportError:
+                    result["humanized"] = False
+
+            return result
 
         except Exception as e:
             print(f"  [WARN] LLM generation failed: {e}. Falling back to heuristic.")
